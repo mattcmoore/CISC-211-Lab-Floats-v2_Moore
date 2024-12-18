@@ -222,6 +222,33 @@ static void checkMax(expectedValues *e,
     return;
 }
 
+static void checkExp(expectedValues *e, 
+        int32_t unpackedExp, 
+        int32_t *goodCount, 
+        int32_t *badCount,
+        char **pfString )
+{
+    if(e->biasedExp == 0) // 
+    {
+        if ((unpackedExp == -126) || (unpackedExp == -127 ))
+        {
+            *goodCount +=1;
+            *pfString = pass;
+        }
+        else
+        {
+            *badCount += 1;
+            *pfString = fail;
+        }
+    }
+    else 
+    {
+        check((int32_t)e->intVal,unpackedExp,goodCount,badCount,pfString);
+    }
+    
+    return;
+}
+
 static void checkMantissa(int32_t expectedMant, 
         int32_t unpackedMant, 
         uint32_t biasedExp,    // biased exponent
@@ -515,7 +542,7 @@ void testMaxResult(int testNum,
     // check the unpacked values
     check(e.signBit,sbMax,passCnt,failCnt,&sbCheck);
     check(e.biasedExp,storedExpMax,passCnt,failCnt,&biasedExpCheck);
-    check(e.unbiasedExp,realExpMax,passCnt,failCnt,&unbiasedExpCheck);
+    checkExp(&e,realExpMax,passCnt,failCnt,&unbiasedExpCheck);
     
     // if expMax is 255, needs special handling.
     // In that case, allow mantissa with or without hidden bit set.
