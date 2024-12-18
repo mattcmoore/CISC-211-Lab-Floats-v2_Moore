@@ -243,7 +243,16 @@ static void checkExp(expectedValues *e,
     }
     else 
     {
-        check((int32_t)e->intVal,unpackedExp,goodCount,badCount,pfString);
+        if (unpackedExp == e->unbiasedExp)
+        {
+            *goodCount +=1;
+            *pfString = pass;
+        }
+        else
+        {
+            *badCount += 1;
+            *pfString = fail;
+        }
     }
     
     return;
