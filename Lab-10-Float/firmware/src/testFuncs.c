@@ -223,14 +223,18 @@ static void checkMax(expectedValues *e,
 }
 
 static void checkExp(expectedValues *e, 
-        int32_t unpackedExp, 
+        int32_t unpackedUnbiasedExp, 
         int32_t *goodCount, 
         int32_t *badCount,
         char **pfString )
 {
-    if(e->biasedExp == 0) // 
+    // since we're not testing subnormals in Fall'24 semester, the biased
+    // exponent can only be zero for +/- 0. And the instructions for
+    // whether how to adjust the exponent for +/- 0 were vague, allow
+    // either possibly correct answer.
+    if(e->biasedExp == 0) 
     {
-        if ((unpackedExp == -126) || (unpackedExp == -127 ))
+        if ((unpackedUnbiasedExp == -126) || (unpackedUnbiasedExp == -127 ))
         {
             *goodCount +=1;
             *pfString = pass;
@@ -243,7 +247,7 @@ static void checkExp(expectedValues *e,
     }
     else 
     {
-        if (unpackedExp == e->unbiasedExp)
+        if (unpackedUnbiasedExp == e->unbiasedExp)
         {
             *goodCount +=1;
             *pfString = pass;
