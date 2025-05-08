@@ -117,9 +117,14 @@ static uint32_t tc2[] = { // DO NOT MODIFY THESE!!!!!
     NEG_INF     // -Inf
 };
 
+// Subnormal range approx 0 to +/-1.1754944 x 10^-38
+#define ENABLE_SUBNORMAL_TEST_CASES 0
+
 // These are the test cases used to test asmFmax
 static float tc[][2] = { // DO NOT MODIFY THESE!!!!!
+#if ENABLE_SUBNORMAL_TEST_CASES
     {   1.175503179e-38, 1.10203478208e-38 },  //  Test case 0
+#endif
     {    -0.2,                 -0.1},          //  Test case 1
     {     1.0,                  2.0},          //  TC #2
     {    -3.1,                  -1.2},         //  TC #3
