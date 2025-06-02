@@ -1,0 +1,162 @@
+ /* Unpack exponents */
+    LDR r0, =f0
+    BL getExponent
+    LDR r3, =storedExp0
+    STR r0, [r3]
+    CMP r0, 0
+    MOVNE r0, r1 /* Use returned 127 bias real exponent if != 0 */
+    SUBEQ r0, r0, 126 /* Use 126 bias if exp == 0 */
+    LDR r3, =realExp0
+    STR r0, [r3] /* Then right the result to real exponent mem location */
+    
+    LDR r0, =f1  /* do the same for f1 */
+    BL getExponent
+    LDR r3, =storedExp1
+    STR r0, [r3]
+    CMP r0, 0
+    SUBNE r0, r0, 127 
+    SUBEQ r0, r0, 126
+    LDR r3, =realExp1
+    STR r0, [r3]
+    
+    /* Unpack mantissas */
+    
+    /*
+	Pass f0 or f1 into getMantissa. First write the 'hidden' bit mantissa
+	returned from the subroutine to the mant0/mant1 mem location. If the
+	stored exponent == 0 or 255 overwrite the mantissa with the version
+	returned from the subroutine with the hidden bit added. 
+	
+	This is because an exponent of 0 or 255 could indicate a subnormal number 
+	(exponent of 0) and to give a subnormal continuity from zero instead of
+	1 (which wouldn't make sense because subnormal numbers are all 0. 
+	something) the implied 1 bit in front of normal numbers is dropped.
+	
+    */
+    LDR r0, =f0
+    BL getMantissa
+    LDR r12, =storedExp0
+    LDR r12, [r12]
+    LDR r11, =mant0
+    STR r12, [r11]
+    CMP r12, 0
+    STREQ r0, [r11] 
+    CMP r12, 255
+    STREQ r0, [r11]
+    
+    /* Same thing for f1 */
+    LDR r0, =f1  
+    BL getMantissa
+    LDR r12, =storedExp1
+    LDR r12, [r12]
+    LDR r11, =mant1
+    STR r12, [r11]
+    CMP r12, 0
+    STREQ r0, [r11] 
+    CMP r12, 255
+    STREQ r0, [r11]
+    
+    /* Compare r0 and r1 to +inf. If so copy to fMax */
+    LDR r6, =fMax
+    
+    LDR r0, =f0
+    /* Subroutine changes r0 depending on +/- infinity or not-infinity */
+    BL asmIsInf
+    /* Checks if r0 == 1, meaning == infinity and sets flags accordingly */
+    CMP r0, 1
+    /* Writes r0 to fMax if == 1 e.g. == + inf */
+    BEQ f0_max
+    CMP r0, -1
+    BEQ f1_max
+    
+    LDR r0, =f1
+    /* Subroutine changes r1 depending on +/- infinity or not-infinity */
+    BL asmIsInf
+    
+    /* 
+    Checks if r1 == 1, meaning == +inf and sets flags accordingly 
+     
+    Writes r0 to fMax if == 1 e.g. == + inf
+     */
+    CMP r0, 1
+    /*
+    Checks if r1 == -1, meaning == -inf and sets flags accordingly 
+     
+    Writes f0 to fMax if r0 == -inf
+    */
+    BEQ f1_max
+    CMP r0, -1
+    BEQ f0_max
+    
+    /* ELSE compare the sign bits */
+
+    LDR r0, =sb0
+    LDR r0, [r0]
+    LDR r1, =sb1
+    LDR r1, [r1]
+    CMP r0, r1
+
+    /* 
+     Branch to f0_max if flags trigger LT conditional. This would mean r0 < r1
+     e.g. r0 == 0 and r1 == 1 so r0 is + while r1 is - and e.g. r0 > r1
+    */
+    BLT f0_max
+    
+     /* 
+     Likewise, branch to f1_max if the opposite is true and e.g. the flags
+     trigger the GT conditional
+    */
+    BGT f1_max
+    
+    /* ElSE compare the real exponents */
+    
+    /* 
+     Copy the f0 and f1 exponents stored at realExp0, realExp1 mem locations
+     to r10 and r11 so the can be used for comparison in the next set of 
+     instructions
+    */
+    LDR r10, =realExp0
+    LDR r10, [r10]
+    LDR r11, =realExp1
+    LDR r11, [r11]
+    
+    /* 
+       Pull the sign bit for f0 out of it's memory location at sb0. If we've
+       made it this far without branching, we know that f0 sign bit = f1 sign 
+       bit.
+       
+       Compare the sign bit to 0, so we can branch to a different sub routine
+       based on whether or not a great real exp is making the value more 
+       positive or more negative.
+    */
+    LDR r12, =sb0
+    LDR r12, [r12]
+    CMP r12, 0
+    CMPLT r10, r11     /* Positive case */
+    BGT f0_max                /* realExp0 > realExp1 */
+    BLT f1_max                /* realExp1 > realExp0 */
+    CMPGT r10, r11     /* Negative case */
+    BGT f1_max                 /* realExp0 > realExp1 (more neg)  */
+    BLT f0_max                 /* realExp1 > realExp0 (more neg) */
+    
+    /* ELSE compare the mantissas */
+    
+    /* 
+     Copy the f0 and f1 exponents stored at mant0, mant1 mem locations
+     to r10 and r11 so the can be used for comparison in the next set of 
+     instructions
+    */
+    LDR r10, =mant0
+    LDR r10, [r10]
+    LDR r11, =mant1
+    LDR r11, [r11]
+    
+    /* 
+       Pull the sign bit for f0 out of it's memory location at sb0. If we've
+       made it this far without branching, we know that f0 sign bit = f1 sign 
+       bit.
+       
+       Compare the sign bit to 0, so we can branch to a different sub routine
+       based on whether or not a great real exp is making the value more 
+       positive or more negative.
+    */
